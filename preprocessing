@@ -1,0 +1,19 @@
+import face_recognition
+import cv2
+import numpy as np
+import csv
+import sys
+from datetime import datetime
+ 
+def preprocess_image(image):
+    # Assuming face_recognition's load_image_file returns an RGB image
+    # Normalize brightness and contrast
+    image = cv2.normalize(image, None, alpha=0, beta=255, norm_type=cv2.NORM_MINMAX)
+ 
+    # Resize image for consistency
+    image = cv2.resize(image, (0, 0), fx=0.5, fy=0.5)
+ 
+    # Apply GaussianBlur to reduce noise
+    image = cv2.GaussianBlur(image, (5, 5), 0)
+ 
+    return image
