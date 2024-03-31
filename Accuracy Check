@@ -1,0 +1,118 @@
+import matplotlib.pyplot as plt
+
+# Plot training & validation accuracy values
+plt.plot(H.history['accuracy'])
+plt.plot(H.history['val_accuracy'])
+plt.title('Model accuracy')
+plt.ylabel('Accuracy')
+plt.xlabel('Epoch')
+plt.legend(['Train', 'Test'], loc='upper left')
+logger.report_matplotlib_figure(plt, "accu", "accu")
+plt.show()
+
+
+# Plot training & validation loss values
+plt.plot(H.history['loss'])
+plt.plot(H.history['val_loss'])
+plt.title('Model loss')
+plt.ylabel('Loss')
+plt.xlabel('Epoch')
+plt.legend(['Train', 'Test'], loc='upper left')
+
+logger.report_matplotlib_figure(plt, "accu", "accu")
+plt.show()
+
+Task.close(task)
+
+from keras.preprocessing import image
+import numpy as np
+
+# Function to preprocess new images
+def preprocess_image(img_path):
+    img = image.load_img(img_path, target_size=(224, 224))
+    img_tensor = image.img_to_array(img)
+    img_tensor = np.expand_dims(img_tensor, axis=0)
+    img_tensor /= 255.0  # Normalize the image
+    return img_tensor
+
+# Load and preprocess the image
+new_image_path = '/content/Test.jpeg'
+new_image = preprocess_image(new_image_path)
+
+# Make a prediction
+predictions = model.predict(new_image)
+
+# Assuming you have more than two classes and are using softmax activation in the last layer
+predicted_class = np.argmax(predictions, axis=1)
+
+# If you have the class labels stored (e.g., from a label encoder or manually specified), you can retrieve the label
+predicted_label = label_encoder.inverse_transform(predicted_class)
+print("Predicted label:", predicted_label)
+
+from IPython.display import display, Javascript, Image
+from google.colab.output import eval_js
+from base64 import b64decode
+import numpy as np
+from PIL import Image
+import io
+
+def take_photo(filename='photo.jpg', quality=0.8):
+  js = Javascript('''
+    async function takePhoto(quality) {
+      const div = document.createElement('div');
+      const capture = document.createElement('button');
+      capture.textContent = 'Capture';
+      div.appendChild(capture);
+
+      const video = document.createElement('video');
+      video.style.display = 'block';
+      const stream = await navigator.mediaDevices.getUserMedia({video: true});
+
+      document.body.appendChild(div);
+      div.appendChild(video);
+      video.srcObject = stream;
+      await video.play();
+
+      // Resize the output to fit the video element.
+      google.colab.output.setIframeHeight(document.documentElement.scrollHeight, true);
+
+      // Wait for Capture to be clicked.
+      await new Promise((resolve) => capture.onclick = resolve);
+
+      const canvas = document.createElement('canvas');
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      canvas.getContext('2d').drawImage(video, 0, 0);
+      stream.getVideoTracks()[0].stop();
+      div.remove();
+      return canvas.toDataURL('image/jpeg', quality);
+    }
+    ''')
+  display(js)
+  data = eval_js('takePhoto({})'.format(quality))
+  binary = b64decode(data.split(',')[1])
+  with open(filename, 'wb') as f:
+    f.write(binary)
+  return filename
+
+# After defining the function, you can use it to capture a photo
+image_path = take_photo() # Captures a photo.
+
+from keras.preprocessing import image
+
+def preprocess_image(img_path, target_size=(224, 224)):
+    img = image.load_img(img_path, target_size=target_size)
+    img_tensor = image.img_to_array(img)
+    img_tensor = np.expand_dims(img_tensor, axis=0)
+    img_tensor /= 255.0  # Normalize the image
+    return img_tensor
+
+# Assuming 'image_path' is the path to the captured image
+img_tensor = preprocess_image(image_path)
+
+predictions = model.predict(img_tensor)
+predicted_class = np.argmax(predictions, axis=1)
+predicted_label = label_encoder.inverse_transform(predicted_class)
+print("Predicted label:", predicted_label)
+
+task.close()
