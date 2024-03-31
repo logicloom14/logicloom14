@@ -1,0 +1,9 @@
+baseModel = VGG16(weights="imagenet", include_top=False, input_shape=(224, 224, 3))
+headModel = baseModel.output
+headModel = Flatten(name="flatten")(headModel)
+headModel = Dense(512, activation="relu")(headModel)
+headModel = Dense(len(np.unique(integer_encoded)), activation="softmax")(headModel)
+model = Model(inputs=baseModel.input, outputs=headModel)
+
+for layer in baseModel.layers:
+    layer.trainable = False
