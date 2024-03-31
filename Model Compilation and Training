@@ -1,0 +1,57 @@
+from tensorflow.keras.callbacks import Callback, LambdaCallback
+# Inside your training function, after initializing your task:
+logger = task.get_logger()
+
+# Manual logging within model.fit() callback
+lambda_clbk = LambdaCallback(
+        on_epoch_end=lambda epoch, logs: [
+            logger.report_scalar(
+                "loss", "train", iteration=epoch, value=logs["loss"]
+            ),
+            logger.report_scalar(
+                "accuracy", "train", iteration=epoch, value=logs["accuracy"]
+            ),
+            logger.report_scalar(
+                "val_loss", "validation", iteration=epoch, value=logs["val_loss"]
+            ),
+            logger.report_scalar(
+                "val_accuracy",
+                "validation",
+                iteration=epoch,
+                value=logs["val_accuracy"],
+            ),
+        ]
+    )
+
+from keras.optimizers import Adam
+from keras.callbacks import LearningRateScheduler
+import math
+from clearml import Dataset, OutputModel, Task
+
+# Define a simple decay function to decrease the learning rate over epochs
+def lr_decay(epoch):
+    initial_lr = 1e-4  # Initial learning rate
+    drop = 0.5  # Reduce the learning rate by half
+    epochs_drop = 10.0  # Reduce the learning rate every 10 epochs
+    lr = initial_lr * math.pow(drop, math.floor((1+epoch)/epochs_drop))
+    return lr
+
+# Learning Rate Scheduler callback
+lr_scheduler = LearningRateScheduler(lr_decay)
+
+# Compile the model using the Adam optimizer without the decay parameter
+model.compile(loss="categorical_crossentropy", optimizer=Adam(learning_rate=1e-4), metrics=["accuracy"])
+
+# Train the model, including the lr_scheduler in the callbacks
+H = model.fit(X_train, y_train, validation_data=(X_test, y_test), epochs=20, batch_size=32, callbacks=[lr_scheduler, lambda_clbk])
+
+# Save and upload the model to ClearML
+model_file_name = "model.h5"
+model.save(model_file_name)
+output_model = OutputModel(task=task)
+output_model.update_weights(
+    model_file_name, upload_uri="https://files.clear.ml"
+)  # Upload the model weights to ClearML
+output_model.publish()  # Make sure the model is accessible
+task.upload_artifact("trained_model", artifact_object=model_file_name)
+
