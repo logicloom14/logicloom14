@@ -1,0 +1,25 @@
+task = Task.init(
+        project_name="AttendanceAI",
+        task_name="Model Training",
+        task_type=Task.TaskTypes.training,
+        auto_connect_frameworks="keras",
+    )
+
+
+# Access dataset
+dataset = Dataset.get(dataset_project="AttendanceAI", dataset_name="processed_data")
+dataset_path = dataset.get_local_copy()
+
+data = np.load(f"{dataset_path}/data_preprocessed.npy")
+labels = np.load(f"{dataset_path}/labels_preprocessed.npy")
+
+# Encode labels
+label_encoder = LabelEncoder()
+integer_encoded = label_encoder.fit_transform(labels)
+labels = to_categorical(integer_encoded)
+
+# Ensure labels are encoded if they're not already in a numerical format
+# For categorical_crossentropy, your labels should be one-hot encoded
+
+# Splitting the dataset into training and testing sets
+X_train, X_test, y_train, y_test = train_test_split(data, labels, test_size=0.25, random_state=42)
