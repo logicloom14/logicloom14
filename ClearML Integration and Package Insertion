@@ -1,0 +1,19 @@
+!pip install clearml
+
+%env CLEARML_WEB_HOST=https://app.clear.ml
+%env CLEARML_API_HOST=https://api.clear.ml
+%env CLEARML_FILES_HOST=https://files.clear.ml
+%env CLEARML_API_ACCESS_KEY=73RL7WEMIA18G2AELNK0
+%env CLEARML_API_SECRET_KEY=kwCw4AJNZZvRiqU35OC5GI3G3YrAZvk4hk63lKbMACHhxMbHtq
+
+import os
+import numpy as np
+from keras.preprocessing.image import img_to_array, load_img
+from keras.models import Model
+from keras.layers import Dense, Flatten
+from keras.applications.vgg16 import VGG16
+from keras.optimizers import Adam
+from sklearn.preprocessing import LabelEncoder
+from tensorflow.keras.utils import to_categorical
+from sklearn.model_selection import train_test_split
+from clearml import Dataset, Task, OutputModel
