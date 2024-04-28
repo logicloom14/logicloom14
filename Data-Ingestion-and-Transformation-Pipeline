@@ -1,0 +1,73 @@
+def preprocess_and_upload_data(
+    raw_dataset_name, project_name, processed_dataset_name
+):
+    import argparse
+    import os
+
+    import numpy as np
+    from clearml import Dataset, Task
+
+    task = Task.init(
+        project_name=project_name,
+        task_name="Dataset Preprocessing",
+        task_type=Task.TaskTypes.data_processing,
+    )
+    raw_dataset = Dataset.get(dataset_project=project_name, dataset_name=raw_dataset_name)
+    raw_data_path = raw_dataset.get_local_copy()
+    data = []
+    labels = []
+
+    for folder in os.listdir(raw_data_path):
+        if folder.startswith("pins_"):
+            folder_path = os.path.join(raw_data_path, folder)
+            label = folder.replace('pins_', '').replace('_', ' ').replace('2', '')  # Adjusted for naming convention
+            for image_file in os.listdir(folder_path):
+                image_path = os.path.join(folder_path, image_file)
+                try:
+                    image = load_and_preprocess_image(image_path)
+                    data.append(image)
+                    labels.append(label)
+                except Exception as e:
+                    print(f"Failed to process {image_path}: {e}")
+
+    # This conditional ensures there's at least one image loaded before attempting to stack
+    if data:
+        data = np.stack(data)  # Use stack instead of vstack for a list of 3D arrays
+        labels = np.array(labels)
+    else:
+        raise ValueError("No images loaded. Check your dataset path and contents.")
+
+    print(f"Loaded {len(data)} images.")
+
+    # Save the preprocessed arrays to files
+    save_preprocessed_data(
+        data,
+        labels,
+        "data_preprocessed.npy",
+        "labels_preprocessed.npy",
+    )
+
+    # Upload the preprocessed arrays to ClearML
+
+    # Create a new ClearML dataset for the preprocessed data
+    processed_dataset = Dataset.create(
+        dataset_name=processed_dataset_name,
+        dataset_project=project_name,
+        parent_datasets=[raw_dataset.id],
+    )
+
+    # Add the saved numpy files to the dataset
+    processed_dataset.add_files("data_preprocessed.npy")
+    processed_dataset.add_files("labels_preprocessed.npy")
+
+    # Upload the dataset to ClearML
+    processed_dataset.upload()
+    processed_dataset.finalize()
+
+    # Clean up: Remove the numpy files after upload
+    os.remove("data_preprocessed.npy")
+    os.remove("labels_preprocessed.npy")
+
+    print(f"Preprocessed dataset uploaded with ID: {processed_dataset.id}")
+    task.close()
+
