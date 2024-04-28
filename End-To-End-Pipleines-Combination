@@ -1,0 +1,62 @@
+import clearml
+from clearml import Task, Dataset, InputModel
+from clearml import PipelineController
+
+def AttendanceAI_pipeline(epochs: int = 20, pipeline_name: str = "AttendanceAI Pipeline", project_name: str = "AttendanceAI", raw_dataset_name: str = "raw_data", processed_dataset_name: str = "processed_data"):
+    pipeline = PipelineController(
+        name=pipeline_name,
+        project=project_name,
+        version="1.0",
+        add_pipeline_tags=True,
+        auto_version_bump=True,
+        target_project=project_name
+    )
+
+    # Parameters
+    pipeline.add_parameter(name="epochs", default=epochs)
+    pipeline.add_parameter(name="project_name", default=project_name)
+    pipeline.add_parameter(name="raw_dataset_name", default=raw_dataset_name)
+    pipeline.add_parameter(name="processed_dataset_name", default=processed_dataset_name)
+
+    # Preprocess Data Step
+    pipeline.add_function_step(
+        name="Preprocess_Data",
+        function=preprocess_and_upload_data,
+        function_kwargs={
+            "raw_dataset_name": "${pipeline.raw_dataset_name}",
+            "project_name": "${pipeline.project_name}",
+            "processed_dataset_name": "${pipeline.processed_dataset_name}"
+        },
+        helper_functions= [load_and_preprocess_image, save_preprocessed_data],
+        task_type=Task.TaskTypes.data_processing,
+        task_name="Preprocess and Upload Dataset"
+    )
+
+    # Train Model Step
+    train_step = pipeline.add_function_step(
+        name="Train_Model",
+        function=train_and_log_model,
+        function_kwargs={
+            "project_name": "${pipeline.project_name}",
+            "task_name": "Train Model",
+            "dataset_project": "${pipeline.project_name}",
+            "dataset_name": "${pipeline.processed_dataset_name}",
+            "test_size": 0.25,
+            "random_state": 42,
+            "initial_lr": 1e-4,
+            "drop": 0.5,
+            "epochs_drop": 10.0,
+            "num_epochs": "${pipeline.epochs}",
+            "batch_size": 32,
+        },
+        task_type=Task.TaskTypes.training,
+        task_name="Train and Log Model",
+        parents=["Preprocess_Data"]
+    )
+
+    # Start the pipeline
+    pipeline.start_locally(True)
+    print("Pipeline started. Check ClearML for progress.")
+
+if __name__ == "__main__":
+    AttendanceAI_pipeline()
